@@ -10,6 +10,10 @@ import { join } from 'path';
 import { CloudinaryService } from './cloudinary/cloudinary.service';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { AdminModule } from './admin/admin.module';
+import { ErrorModuleModule } from './error_module/error_module.module';
+import { ActivityLogsModule } from './activity_logs/activity_logs.module';
+import { ChatGateway } from './chat/chat.gateway';
+import { ChatModule } from './chat/chat.module';
 @Module({
   imports: [
     UsersModule,
@@ -24,9 +28,12 @@ import { AdminModule } from './admin/admin.module';
     JwtModule,
     ConfigureDB(),
     CloudinaryModule,
-    AdminModule
+    AdminModule,
+    ErrorModuleModule,
+    ActivityLogsModule,
+    ChatModule
   ],
   controllers: [],
-  providers: [TokenService, SmsService, CloudinaryService]
+  providers: [TokenService, SmsService, CloudinaryService, ChatGateway]
 })
 export class AppModule {}

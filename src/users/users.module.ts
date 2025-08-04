@@ -9,6 +9,7 @@ import { TokenModule } from 'src/token/token.module';
 import { SmsModule } from 'src/sms/sms.module';
 import { JwtModule } from '@nestjs/jwt';
 import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
+import { ActivityLogsModule } from 'src/activity_logs/activity_logs.module';
 
 @Module({
   imports : [
@@ -17,6 +18,7 @@ import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
     TokenModule,
     JwtModule,
     CloudinaryModule,
+    ActivityLogsModule,
     MongooseModule.forFeature([
       {
         name : User.name,

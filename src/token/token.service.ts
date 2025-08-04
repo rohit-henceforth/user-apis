@@ -41,17 +41,26 @@ export class TokenService {
                 _id
             },
             {
-                secret : this.configService.get("REFRESH_TOKEN_SECRET"),
+                secret: this.configService.get("REFRESH_TOKEN_SECRET"),
                 expiresIn: this.configService.get("REFRESH_TOKEN_EXPIRY")
             }
         )
     }
 
-    async verifyRefeshToken(token : string) {
+    async verifyRefeshToken(token: string) {
         return await this.jwtService.verify(
             token,
             {
-                secret : this.configService.get("REFRESH_TOKEN_SECRET")
+                secret: this.configService.get("REFRESH_TOKEN_SECRET")
+            }
+        )
+    }
+
+    async verifyAccessToken(token: string) {
+        return await this.jwtService.verify(
+            token,
+            {
+                secret: this.configService.get("ACCESS_TOKEN_SECRET")
             }
         )
     }

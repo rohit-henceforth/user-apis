@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { GetUsersDto } from './dto/get-users.dto';
 import { CreateNewEntryDto } from './dto/create-new-entery.dto';
@@ -8,6 +8,7 @@ import { RolesGuard } from 'src/common/guards/role.guard';
 import { Role } from 'src/common/enums/role.enum';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { DeleteEntryDto } from './dto/delete-entry.dto';
+import { UpdateEntryDto } from './dto/update-entry.dto';
 
 @Controller('admin')
 @UseGuards(AuthGuard,RolesGuard)
@@ -45,6 +46,18 @@ export class AdminController {
   @Roles(Role.Admin,Role.SuperAdmin)
   deleteUser(@Param() deleteEntryDto : DeleteEntryDto){
     return this.adminService.deleteEntry(deleteEntryDto,Role.User);
+  }
+
+  @Patch("update-admin")
+  @Roles(Role.SuperAdmin)
+  updateAdminDetails(@Body() updateEntryDto : UpdateEntryDto){
+    return this.adminService.deleteEntry(updateEntryDto,Role.Admin);
+  } 
+
+  @Patch("update-user")
+  @Roles(Role.Admin,Role.SuperAdmin)
+  updateUserDetails(@Body() updateEntryDto : UpdateEntryDto){
+    return this.adminService.updateEntry(updateEntryDto,Role.User);
   }
 
 }
