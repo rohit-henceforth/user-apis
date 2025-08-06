@@ -14,6 +14,7 @@ import { ErrorModuleModule } from './error_module/error_module.module';
 import { ActivityLogsModule } from './activity_logs/activity_logs.module';
 import { ChatGateway } from './chat/chat.gateway';
 import { ChatModule } from './chat/chat.module';
+import { OtpModule } from './otp/otp.module';
 @Module({
   imports: [
     UsersModule,
@@ -31,9 +32,10 @@ import { ChatModule } from './chat/chat.module';
     AdminModule,
     ErrorModuleModule,
     ActivityLogsModule,
-    ChatModule
+    ChatModule,
+    OtpModule
   ],
   controllers: [],
-  providers: [TokenService, SmsService, CloudinaryService, ChatGateway]
+  providers: [TokenService, SmsService, CloudinaryService]
 })
 export class AppModule {}

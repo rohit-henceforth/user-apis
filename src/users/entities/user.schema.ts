@@ -1,97 +1,136 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import * as bcrypt from "bcrypt" ;
-import { PaginateModel } from "mongoose";
+import * as bcrypt from "bcrypt";
+import { PaginateModel, Types } from "mongoose";
 import * as mongoosePaginate from 'mongoose-paginate-v2';
 
-export type UserDocument = User & Document ;
+export type UserDocument = User & Document;
 export type UserModelPaginate = PaginateModel<UserDocument>;
 
 @Schema()
-export class User{
+export class User {
 
     @Prop({
-        required : true,
-        trim : true
+        required: true,
+        trim: true
     })
-    name : string ;
+    name: string;
 
     @Prop()
-    profilePic : string ;
+    profilePic: string;
 
     @Prop()
-    profilePicPublicId : string ;
+    profilePicPublicId: string;
 
     @Prop({
-        required : true,
-        unique : true
+        required: true,
+        unique: true
     })
-    email : string ;
+    email: string;
 
     @Prop({
-        required : true
+        required: true
     })
-    password : string ;
+    password: string;
 
     @Prop()
-    emailOtp : number ;
+    resetPasswordToken: string;
 
     @Prop({
-        required : true,
-        default : () => Date.now() + 300000
+        required: true,
+        unique: true
     })
-    emailOtpExpiry : number ;
+    contactNumber: number;
 
     @Prop()
-    contactOtp : number ;
+    refreshToken: string;
 
     @Prop({
-        required : true,
-        default : () => Date.now() + 300000
+        required: true,
+        default: false
     })
-    contactOtpExpiry : number ;
-
-    @Prop()
-    resetPasswordToken : string ;
+    isEmailVerified: boolean;
 
     @Prop({
-        required : true,
-        unique : true
+        required: true,
+        default: false
     })
-    contactNumber : number;
+    isContactNumberVerified: boolean;
 
     @Prop({
-        unique : true
+        required: true,
+        default: 'user'
     })
-    refreshToken : string;
-
-    @Prop({
-        required : true,
-        default : false
-    })
-    isVerified : boolean ;
-
-    @Prop({
-        required : true,
-        default : 'user'
-    })
-    role : 'admin' | 'user' ;
+    role: 'admin' | 'user' | 'super-admin';
 
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
 UserSchema.plugin(mongoosePaginate);
 
-UserSchema.pre<UserDocument>("save",async function(next){
-    const user = this as any ;
-    if(!user.isModified('password')) return next();
-    const salt = await bcrypt.genSalt();
-    this.password = await bcrypt.hash(this.password,salt);
-    next();
-})
-
-UserSchema.methods.isPasswordCorrect = async function(newPassword : string){
+UserSchema.methods.isPasswordCorrect = async function (newPassword: string) {
     return await bcrypt.compare(
         newPassword,
         this.password
     );
 }
+
+export type PendingUserDocument = PendingUser & Document;
+
+@Schema({
+    timestamps : true
+})
+export class PendingUser{
+    @Prop({
+        required: true,
+        trim: true
+    })
+    name: string;
+
+    @Prop({
+        required: true,
+        unique: true
+    })
+    email: string;
+
+    @Prop({
+        required: true
+    })
+    password: string;
+
+    @Prop({
+        required: true,
+        unique: true
+    })
+    contactNumber: number;
+
+    @Prop({
+        required: true,
+        default: false
+    })
+    isVerified: boolean;
+
+    @Prop({
+        required: true,
+        default: 'user'
+    })
+    role: 'admin' | 'user';
+
+    @Prop({
+        default : Date.now,
+        index : { 
+            expires : 180
+        }
+    })
+    createdAt : Date ;
+
+}
+
+export const PendingUserSchema = SchemaFactory.createForClass(PendingUser);
+
+PendingUserSchema.pre<PendingUserDocument>("save", async function (next) {
+    const user = this as any;
+    if (!user.isModified('password')) return next();
+    const salt = await bcrypt.genSalt();
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+})

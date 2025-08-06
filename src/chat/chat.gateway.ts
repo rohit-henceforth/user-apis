@@ -1,13 +1,16 @@
-import { UnauthorizedException } from '@nestjs/common';
 import { SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from "socket.io";
 import { TokenService } from 'src/token/token.service';
+import { ChatService } from './chat.service';
+import { SendDirectMessageDto } from './dto/send-direct-message.dto';
+import { Types } from 'mongoose';
 
 @WebSocketGateway()
 export class ChatGateway {
 
   constructor(
-    private tokenService: TokenService
+    private tokenService: TokenService,
+    private chatService : ChatService
   ) { }
 
   @WebSocketServer()
@@ -15,29 +18,77 @@ export class ChatGateway {
 
   private userSockets = new Map();
 
+  private async sendPendingMessages(client,_id){
+    
+    const pendingMessages = await this.chatService.getUsersPendingMessages(_id);
+
+      console.log(this.userSockets);
+
+      if(pendingMessages?.length > 0){
+        
+        for(let pendingMessage of pendingMessages){
+
+          if(pendingMessage.chat.isGroup){
+            var messageEvent = 'send-group-message' ;
+          }else{
+            var messageEvent = 'send-direct-message' ;
+          }
+
+          this.server.to(client.id).emit(messageEvent,{...pendingMessage,deliveredTo : null});
+          
+          const senderSocketId = this.userSockets.get(pendingMessage.sender._id.toString());
+          await this.chatService.markMessageDelivered(pendingMessage._id,_id);
+
+          console.log(senderSocketId)
+          
+          if(senderSocketId){
+
+            this.server.to(senderSocketId).emit('message-delivered',{messageId : pendingMessage?._id, recieverId : client.userId});
+
+          }
+
+        }
+
+      }
+
+  }
+
+  private async addUserToGroupRoom(client,_id){
+
+    const usersGroups : any = await this.chatService.getUserGroups(_id) ;
+
+    console.log(usersGroups);
+
+    for(const userGroup of usersGroups) {
+      client.join(userGroup._id.toString());
+      console.log(`User : ${_id} has joined the group ${userGroup?._id} with socketId : ${client.id} !`)
+    }
+
+  }
+
   async handleConnection(client: Socket) {
 
     try {
 
-      // const userToken = client.handshake.query.token as string;
+      const token = client.handshake.query.token;
 
-      // if (!userToken) {
-      //   throw new UnauthorizedException("User token is required")
-      // }
+      const { _id } = await this.tokenService.verifyAccessToken(String(token));
 
-      // const user = await this.tokenService.verifyAccessToken(userToken);
+      this.userSockets.set(_id,client.id);
 
-      // this.userSockets.set(user?._id, client?.id);
+      console.log(this.userSockets);
 
-      // (client as any).user = user?._id;
+      (client as any).userId = _id ;
+      
+      await this.addUserToGroupRoom(client,_id);
 
-      console.log(`New user connected to socket.io using id : ${client.id}`)
+      await this.sendPendingMessages(client,_id);
 
     } catch (error) {
 
       client.disconnect();
 
-      throw error ;
+      console.log(error)
 
     }
 
@@ -45,29 +96,46 @@ export class ChatGateway {
 
   handleDisconnect(client: any) {
 
-    this.userSockets.delete(client?.user);
-
-    console.log(`A user disconnected to socket.io using id: ${client.id}`)
+    this.userSockets.delete(client?.userId);
 
   }
 
-  @SubscribeMessage('new-message')
-  handleMessage(client: any, payload: any) {
+  @SubscribeMessage('send-direct-message')
+  async handleMessage(client: any, payload: SendDirectMessageDto) {
 
-    this.server.emit('new-message', payload)
+    const newMessage = await this.chatService.createNewDirectMessage(client.userId,payload.receiverId,payload.content,this.userSockets);
+
+    const senderSocketId = this.userSockets.get(client.userId);
+    const recieverSocketId = this.userSockets.get(payload.receiverId);
+
+    this.server.to([senderSocketId,recieverSocketId]).emit('send-direct-message',{...newMessage,deliveredTo : null});
+
+    if(newMessage.deliveredTo.includes(new Types.ObjectId(payload.receiverId))){
+      this.server.to(senderSocketId).emit('message-delivered',{messageId : newMessage?._id, recieverId : client.userId});
+    }
 
   }
 
-  @SubscribeMessage('join-group')
-  handleJoinGroup(client: any, payload: any) {
+  @SubscribeMessage('message-seen')
+  async handleMessageSeen(client: any, payload: {messageId : string}) {
 
-    client.join("new-group")
+    const seenMessage = await this.chatService.markMessageSeen(payload.messageId,client.userId);
+
+    const senderSocketId = this.userSockets.get(seenMessage?.senderId.toString());
+
+    if(senderSocketId){
+      this.server.to(senderSocketId).emit('message-seen',{messageId : seenMessage?._id, recieverId : client.userId});
+    }
 
   }
 
-  @SubscribeMessage('message-group')
-  handleMessageGroup(client: any, payload: any) {
-    this.server.to("new-group").emit('new-message',payload)
-  } 
+  @SubscribeMessage('send-group-message')
+  async handleGroupMessage(client : any, payload : any){
+
+    const newMessage = await this.chatService.createGroupMessage(client?.userId,payload?.groupId,payload?.content,this.userSockets);
+
+    client.to(payload.groupId.toString()).emit('send-group-message',newMessage);
+
+  }
 
 }

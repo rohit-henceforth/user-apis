@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { CreateNewEntryDto } from './dto/create-new-entery.dto';
 import { DeleteEntryDto } from './dto/delete-entry.dto';
 import { UpdateEntryDto } from './dto/update-entry.dto';
+import * as bcrypt from "bcrypt" ;
 
 @Injectable()
 export class AdminService {
@@ -27,13 +28,16 @@ export class AdminService {
 
             if (!isAlreadyExisting) {
 
+                const hashedPassword = await bcrypt.hash(this.configService.get('SUPER_ADMIN_PASSWORD'),10)
+
                 const superAdmin = new this.userModel({
                     name: 'admin',
                     email: this.configService.get('SUPER_ADMIN_EMAIL'),
                     contactNumber: this.configService.get('SUPER_ADMIN_CONTACT'),
-                    password: this.configService.get('SUPER_ADMIN_PASSWORD'),
+                    password: hashedPassword,
                     role: 'super-admin',
-                    isVerified: true
+                    isEmailVerified: true,
+                    isContactNumberVerified : true
                 })
 
                 await superAdmin.save();

@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { ActivityLog, ActivityPaginateModel } from './entities/activity_log.schema';
 import ApiResponse from 'src/common/helpers/api-response';
 import { GetActivityLogDto } from './dto/get-activity-logs.dto';
+import mongoose from 'mongoose';
 
 @Injectable()
 export class ActivityLogsService {
@@ -36,10 +37,8 @@ export class ActivityLogsService {
     }
 
     if (user) {
-      filters.userId = user;
+      filters.userId = new mongoose.Types.ObjectId(user);
     }
-
-    console.log(filters)
 
     const allLogs = await this.activityModel.paginate(
       filters,
